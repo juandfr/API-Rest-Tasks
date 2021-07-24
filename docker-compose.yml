@@ -1,0 +1,88 @@
+version: "3.7"
+services:
+  app:
+    build:
+      args:
+        user: juancfranca
+        uid: 1000
+      context: ./
+      dockerfile: Dockerfile
+    image: todo
+    container_name: todo-app
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./:/var/www
+    environment:
+      - COMPOSER_MEMORY_LIMIT=-1
+    networks:
+      - todo
+
+  db:
+    image: mysql:5.7
+    container_name: todo-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: homestead
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: homestead
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    ports:
+      - 33066:3306
+    volumes:
+      - ./docker-compose/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - todo
+
+  nginx:
+    image: nginx:alpine
+    container_name: todo-nginx
+    restart: unless-stopped
+    ports:
+      - 9000:80
+    volumes:
+      - ./:/var/www
+      - ./docker-compose/nginx:/etc/nginx/conf.d/
+    networks:
+      - todo
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: todo-phpmyadmin
+    restart: always
+    environment:
+      - PMA_ARBITRARY=1
+    links:
+      - db
+    ports:
+      - 8086:80
+    volumes:
+      - /sessions
+    networks:
+      - todo
+
+  redis:
+    image: "redis:alpine"
+    container_name: todo-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    networks:
+      - todo
+
+  maildev:
+    image: djfarrelly/maildev
+    container_name: todo-maildev
+    expose:
+      - 25
+    ports:
+      - 1081:80
+      - 1026:25
+    networks:
+      - todo
+
+networks:
+  todo:
+    driver: bridge
